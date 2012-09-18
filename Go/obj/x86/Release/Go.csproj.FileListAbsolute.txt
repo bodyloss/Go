@@ -1,5 +1,0 @@
-C:\Users\jciechanowicz\Documents\Visual Studio 2010\Projects\Go\Go\obj\x86\Release\ResolveAssemblyReference.cache
-C:\Users\jciechanowicz\Documents\Visual Studio 2010\Projects\Go\Go\bin\Release\Go.exe
-C:\Users\jciechanowicz\Documents\Visual Studio 2010\Projects\Go\Go\bin\Release\Go.pdb
-C:\Users\jciechanowicz\Documents\Visual Studio 2010\Projects\Go\Go\obj\x86\Release\Go.exe
-C:\Users\jciechanowicz\Documents\Visual Studio 2010\Projects\Go\Go\obj\x86\Release\Go.pdb
