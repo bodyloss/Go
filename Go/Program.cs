@@ -17,7 +17,7 @@ namespace Go
     class Program
     {
         // Change to path where you want to store your identifiers:commands
-        private const string FILENAME = @"c:\users\jciechanowicz\GoCommands.dat";
+        private const string FILENAME = @"c:\Users\jciechanowicz\GoCommands.dat";
         private const string LINE_SEPERATOR = "\t";
 
         private static string[] _reserved = new string[] {"add", "-a", "list", "-l", "remove", "-r", "clear", "-c"};
@@ -42,7 +42,7 @@ namespace Go
                 int gotLine = TryGetCommandLine(x[1], out line);
                 if (gotLine == 0)
                     return line;
-                else if (gotLine == 1)
+                else if (gotLine == 2)
                     return "Command file already contains entry for '" + x[1] + "' with command: " + line.Substring((x[1].Length + LINE_SEPERATOR.Length) - 1);
 
                 // Need to concatenate all arguments after the identifier
@@ -181,6 +181,11 @@ go remove-r command
 
             try
             {
+                if (!File.Exists(FILENAME))
+                {
+                    File.Create(FILENAME).Close();
+                }
+
                 using (var sr = new StreamReader(FILENAME) )
                 {
                     string line;
