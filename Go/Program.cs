@@ -18,7 +18,7 @@ namespace Go
     class Program
     {
         // Change to path where you want to store your identifiers:commands
-        private const string FILENAME = @"c:\Users\jciechanowicz\GoCommands.dat";
+        private static string FILENAME =  Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "\\GoCommands.dat";
         private const string LINE_SEPERATOR = "\t";
 
         private static string[] _reserved = new string[] {"add", "-a", "list", "-l", "remove", "-r", "clear", "-c", "info", "-i", "move", "-m"};
