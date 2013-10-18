@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.IO;
-using System.Diagnostics;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 
 /*
@@ -20,7 +21,7 @@ namespace Go
         private const string FILENAME = @"c:\Users\jciechanowicz\GoCommands.dat";
         private const string LINE_SEPERATOR = "\t";
 
-        private static string[] _reserved = new string[] {"add", "-a", "list", "-l", "remove", "-r", "clear", "-c"};
+        private static string[] _reserved = new string[] {"add", "-a", "list", "-l", "remove", "-r", "clear", "-c", "info", "-i", "move", "-m"};
 
         public static Dictionary<Regex, Func<string[], string>> argIdents = new Dictionary<Regex, Func<string[], string>>
         {
@@ -82,6 +83,7 @@ namespace Go
              * Lists all commands in the file
              */
             {new Regex("list|-l"), x => {
+                // Create either a sorted set or a list
                 ICollection<string> lines = x.Length > 1 && x[1] != null ? (ICollection<string>)new SortedSet<string>() : new List<string>();
                 try
                 {
@@ -108,7 +110,29 @@ namespace Go
              * Removes a command from the file
              */
             {new Regex("remove|-r"), x => {
-                return "This doesn't work, clear it or manually do it."; 
+                string message = null;
+
+                if (TryRemoveCommand(x[1], out message)) {
+                    return "Successfully removed " + x[1];
+                } else {
+                    return message;
+                }               
+            }},
+            /*
+             * Moves a identifier to another identifier
+             */
+            {new Regex("move|-m"), x => {
+                if (x.Length != 3) {
+                    return "Invalid number of identifiers for move. Expected 'move identifier newIdentifier'";
+                }
+
+                string message = null;
+
+                if (TryMoveCommand(x[1], x[2], out message)) {
+                    return "Successfully moved " + x[1] + " to " + x[2];
+                } else {
+                    return message;
+                }               
             }},
             { new Regex("clear|-c"), x => {
                 try {
@@ -120,13 +144,24 @@ namespace Go
                 }
                 return "";
             }},
+            /*
+             * Prints info
+             */
+            {new Regex("info|-i"), x => {
+                return "Location: " + Assembly.GetEntryAssembly().Location;
+            }},
+            /*
+             * Prints the help message
+             */
             { new Regex(@"help|/\?|-h"), x => {
                 return 
 @"Usage: go identifier
 go add|-a identifier command
 go list|-l [order]
 go clear|-c
-go remove-r command            
+go remove|-r command
+go move|-m identifier newIdentifier           
+go info|-i
 ";
             }},
             /*
@@ -167,6 +202,66 @@ go remove-r command
                 }
             }},
         };
+
+        /// <summary>
+        /// Tries to move a identifier to another identifier
+        /// </summary>
+        /// <param name="p"></param>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        private static bool TryMoveCommand(string oldIdentifier, string newIdentifier, out string message)
+        {
+            string ident = oldIdentifier + LINE_SEPERATOR;
+
+            try
+            {
+                if (!File.Exists(FILENAME))
+                {
+                    File.Create(FILENAME).Close();
+                }
+
+                StringBuilder linesToWriteBack = new StringBuilder();
+
+                using (var sr = new StreamReader(FILENAME))
+                {
+                    string line;
+                    while ((line = sr.ReadLine()) != null)
+                    {
+
+                        // Check if we have our line
+                        if (line.StartsWith(ident))
+                        {
+                            // we do, so continue, not adding it to what should be written back
+                            linesToWriteBack.Append(line.Replace(oldIdentifier, newIdentifier) + "\n");
+
+                            continue;
+                        }
+
+                        linesToWriteBack.Append(line + "\n");
+                    }
+                }
+
+                File.WriteAllText(FILENAME, linesToWriteBack.ToString());
+
+                message = "";
+                return true;
+            }
+            catch (FileNotFoundException)
+            {
+                message = "Could not find file: " + FILENAME;
+                return false;
+            }
+            catch (IOException ioe)
+            {
+                message = "IO exception while reading file: " + ioe.Message;
+                return false;
+            }
+            catch (System.ComponentModel.Win32Exception w32e)
+            {
+                message = "Win32 exception while executing command: " + w32e.Message;
+                return false;
+            }
+        }
 
         /// <summary>
         /// Tries to get the relevant command line from the file,
@@ -219,6 +314,58 @@ go remove-r command
             }
         }
 
+        private static bool TryRemoveCommand(string identifier, out string message)
+        {
+            string ident = identifier + LINE_SEPERATOR;
+
+            try
+            {
+                if (!File.Exists(FILENAME))
+                {
+                    File.Create(FILENAME).Close();
+                }
+
+                StringBuilder linesToWriteBack = new StringBuilder();
+
+                using (var sr = new StreamReader(FILENAME))
+                {
+                    string line;
+                    while ((line = sr.ReadLine()) != null)
+                    {
+
+                        // Check if we have our line
+                        if (line.StartsWith(ident))
+                        {
+                            // we do, so continue, not adding it to what should be written back
+                            continue;
+                        }
+
+                        linesToWriteBack.Append(line);
+                    }
+                }
+
+                File.WriteAllText(FILENAME, linesToWriteBack.ToString());
+
+                message = "";
+                return true;
+            }
+            catch (FileNotFoundException)
+            {
+                message = "Could not find file: " + FILENAME;
+                return false;
+            }
+            catch (IOException ioe)
+            {
+                message = "IO exception while reading file: " + ioe.Message;
+                return false;
+            }
+            catch (System.ComponentModel.Win32Exception w32e)
+            {
+                message = "Win32 exception while executing command: " + w32e.Message;
+                return false;
+            }
+        }
+
         static void Main(string[] args)
         {
             if (args.Length == 0) {
@@ -226,10 +373,18 @@ go remove-r command
                 return;
             }
 
-            string message = argIdents.First(x => x.Key.IsMatch(args[0])).Value(args);
-            if (message != "")
+            try
             {
-                Console.WriteLine(message);
+                string message = argIdents.First(x => x.Key.IsMatch(args[0])).Value(args);
+                if (message != "")
+                {
+                    Console.WriteLine(message);
+                    Console.Read();
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Unexpected exception: " + e.Message);
                 Console.Read();
             }
         }
